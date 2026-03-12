@@ -1,0 +1,76 @@
+---
+title: "Global News Analytics using the NewsData.io API"
+format: html
+---
+<br>
+
+## 1. Context and Motivation
+
+This feasibility study outlines a data science project centered on the analysis of global news articles retrieved via the NewsData.io API. The dataset under consideration contains rich metadata for each article, including publication source, language, country of origin, topic category, publication timestamp, sentiment indicators, and AI-generated tags. By combining these dimensions, the project aims to uncover patterns in how news is produced, distributed, and emotionally framed across different regions and topics.
+
+The project is motivated by the growing importance of media analytics in understanding public discourse. With news APIs providing structured, machine-readable access to global media, there is significant potential to derive novel insights through aggregation and cross-dimensional analysis. The project will be implemented entirely in Python, leveraging libraries for data acquisition, transformation, and visualization.
+
+## 2. Research Questions
+
+Three research questions guide this project, progressing from descriptive to comparative analysis, ensuring a range of complexity in the analytical tasks.
+
+| | **Research Question** |
+|---|---|
+| **Research Question 1** | Which countries and sources generate the most news coverage, and is there a geographic bias toward certain regions? |
+| **Research Question 2** | How does article volume per topic category change over time—are certain topics more time-sensitive than others? |
+| **Research Question 3** | Are the same topic categories covered equally across different language groups, or do some languages focus on specific themes? |
+
+## 3. Methodology
+
+The project will be implemented in Python, drawing on the NewsData.io API as its primary data source and a structured analytical pipeline comprising data acquisition, transformation, and visualization.
+
+### Data Sources
+
+The primary data source is the NewsData.io API, which provides access to news articles from thousands of global publishers.
+
+To evaluate the underlying data structures and validate project feasibility, we developed a Proof of Concept (POC). This POC consists of a standalone Python script that interfaces with the NewsData.io API via HTTP requests. The retrieved JSON response is parsed into a DataFrame for data inspection and schema validation. By demonstrating these core functionalities, the POC establishes a robust technical baseline for the MVP and the subsequent development of the production data pipeline.
+
+The sample data confirms the availability of the following key fields:
+
+- article_id, title, description, content—Article identifiers and textual content
+- pubDate, pubDateTZ—Publication timestamps enabling temporal analysis
+- source_id, source_name, source_priority, source_url—Publisher metadata
+- country, language—Geographic and linguistic classification
+- category—Human-assigned topic category (e.g., sports, politics, business)
+- sentiment, sentiment_stats—Pre-computed sentiment labels and statistics (not available in the free tier)
+- ai_tag, ai_region, ai_org, ai_summary—AI-generated metadata tags (not available in the free tier)
+
+API requests will be parameterized to retrieve articles across multiple categories, languages, and date ranges. Given the structured nature of API data, a higher-complexity dataset is targeted (≥1,000 articles).
+
+### Risks & Mitigation
+
+| **Risk** | **Impact** | **Mitigation** |
+|---|---|---|
+| **API rate limits / free tier** | Without parameterizing the API requests, the endpoint only allows extraction of the latest 10 articles, which leads to an insufficient data volume. | Use country as a parameter and iterate over it. |
+| **Missing / incomplete fields** | Content, sentiment, and ai_tags are not available in the free version. | As we cannot perform any analysis on those fields, we do not include them in the final data structure. |
+| **Data quality & consistency** | Inconsistent category labels, country codes, and duplicate articles. | Use the "pycountry" library to map inconsistent country names to **ISO 3166-1** codes and the "langcodes" library for **BCP 47** compliance. |
+
+## 4. Data Presentation
+
+The data will be presented through a series of targeted visualizations designed to transition from broad descriptive statistics to granular comparative insights. The following methods will be employed to address each research question.
+
+### RQ1: Geographic Coverage and Bias
+
+The goal is to identify which countries and sources dominate the news and whether there is a regional imbalance.
+
+- **Geographic Heatmap**: Use a world map where color intensity represents the volume of articles per country (standardized by ISO 3166-1 codes).
+- **Bar Chart**: A ranked bar chart of the top 10–20 news sources by article count to highlight dominant publishers.
+
+### RQ2: Topic Sensitivity Over Time
+
+This section tracks how specific news categories (e.g., politics, business, technology) fluctuate in volume over time.
+
+- **Time-Series Line Charts**: Plot publication dates (pubDate) on the x-axis and article volume on the y-axis, using different colored lines for each category.
+- **Rolling Averages**: Apply rolling averages to the line charts to smooth out daily noise and reveal broader weekly or monthly trends.
+
+### RQ3: Cross-Linguistic Topic Distribution
+
+This section compares whether specific languages focus more heavily on certain themes than others.
+
+- **Stacked Bar Charts**: Each bar represents a language; the "stacks" within the bar show the percentage breakdown of topic categories.
+- **Percentage Breakdowns**: Using relative percentages (rather than raw counts) ensures that a language with fewer total articles can still be compared fairly against a dominant language.
