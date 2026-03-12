@@ -12,4 +12,4 @@ data = response.json()
 
 df = pd.DataFrame.from_dict(data['results'], orient='columns')
 print(df.head(10))
-df.to_csv('data/poc.csv')
+df.to_csv('data/poc/poc.csv')
