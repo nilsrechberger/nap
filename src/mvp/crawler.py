@@ -5,8 +5,8 @@ load_dotenv()
 import requests
 import pandas as pd
 
-def fetch_data() -> None:
-    url = f"https://newsdata.io/api/1/latest?apikey={os.getenv('API_KEY')}"
+def fetch_data(country: str) -> None:
+    url = f"https://newsdata.io/api/1/latest?apikey={os.getenv('API_KEY')}&country={country}"
     response = requests.get(url)
     return response.json()
 
