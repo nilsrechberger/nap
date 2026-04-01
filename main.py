@@ -2,11 +2,10 @@
 import pandas as pd
 
 # Project packages
-from src.mvp.crawler import fetch_data
-from src.mvp.processor import *
+from src.crawler import fetch_data
+from src.processor import *
 
-if __name__ == '__main__':
-
+def main():
     results = pd.DataFrame()
 
     eu_countries = [
@@ -26,3 +25,6 @@ if __name__ == '__main__':
     print(clean_results)
 
     clean_results.to_csv('data/processed/precessed_data.csv')
+
+if __name__ == '__main__':
+    main()
