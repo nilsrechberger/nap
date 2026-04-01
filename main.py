@@ -17,14 +17,10 @@ def main() -> None:
     results = pd.DataFrame()
 
     eu_countries = [
-        "at"
-    ]
-
-    """ eu_countries = [
         "at", "be", "bg", "cy", "cz", "de", "dk", "ee", "es", "fi", 
         "fr", "gr", "hr", "hu", "ie", "it", "lt", "lu", "lv", "mt", 
         "nl", "pl", "pt", "ro", "se", "si", "sk"
-    ] """
+    ]
     
     for country in eu_countries:
         raw_data = fetch_data(country)
