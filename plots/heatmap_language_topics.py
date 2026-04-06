@@ -3,12 +3,16 @@ import ast
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 import numpy as np
-from pathlib import Path
+import os
 
 
 # ── 1. Load & parse ──────────────────────────────────────────────────────────
-BASE = Path(__file__).parent
-df = pd.read_csv(BASE / "data" / "raw" / "raw_data_2026-04-02.csv")
+try:
+    BASE_DIR = BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+except NameError:
+    BASE_DIR = os.getcwd()
+
+df = pd.read_csv(os.path.join(BASE_DIR, "data", "processed", "merged_data.csv"))
 
 df["category_list"] = df["category"].apply(
     lambda x: ast.literal_eval(x) if pd.notna(x) else []
@@ -19,7 +23,7 @@ df_exp["cat"] = df_exp["category_list"].str.strip().str.lower()
 
 # ── 2. Filter ─────────────────────────────────────────────────────────────────
 MAIN_CATS = ["lifestyle", "sports", "business", "entertainment",
-             "technology", "world", "politics"]
+             "technology", "world", "politics","crime"]
 
 lang_counts = df["language"].value_counts()
 valid_langs = lang_counts[lang_counts >= 5].index.tolist()
