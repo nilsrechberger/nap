@@ -1,3 +1,20 @@
+
+Project structure
+
+#Context and motivation: Nils
+
+#Research Questions: Petra
+
+#Methodology (GIT architecture): Nils
+
+#Data Presentation: Petra & Khrys
+
+#Outlook: Petra & Khrys
+
+#Use of GenAI: Petra & Khrys
+
+
+#Research question 3
 ---
 title: "NAP"
 format: pdf
@@ -156,4 +173,17 @@ plt.show()
 
 
 ```
-This is bla bla bla 
+For question number 2:
+Our dataset isn't well-suited for a time-series visualization to answer this question. Here's why:
+
+78% of rows have no date (1,803 out of 2,313 are missing pubDate and fetched_at).
+The rows that do have dates span less than 24 hours (April 1–2, 2026), with most articles concentrated in a single morning window.
+There's no multi-day or multi-week range to see trends or time-sensitivity patterns.
+
+To properly answer "how does volume change over time," we'd need data collected over several days or weeks. Here's what I'd suggest:
+Short term — if you want to make something with what you have now, the best option is a stacked bar chart of category distribution by hourly bins for the ~510 dated articles. It would show which topics peak at which hours, but the conclusions would be weak given the narrow window.
+Better approach — run your main() crawler on a daily schedule (e.g., via cron or Task Scheduler) for 1–2 weeks, then merge all the processed files. With that data, a streamgraph or stacked area chart showing daily article counts per category would clearly reveal which topics spike and fade (time-sensitive) versus which stay steady.
+
+We will replace q2 with:
+How widely do news stories spread across sources, and which topics generate the most duplicated coverage?
+

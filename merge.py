@@ -23,7 +23,7 @@ from pathlib import Path
 # ── PATHS ─────────────────────────────────────────────────────────────────────
 BASE_DIR      = Path(os.path.dirname(os.path.abspath(__file__)))
 PROCESSED_DIR = BASE_DIR / "data" / "processed"
-OUT_PATH      = PROCESSED_DIR / "processed_merged.csv"
+OUT_PATH      = PROCESSED_DIR / "merged data.csv"
 
 # ── STANDARD COLUMNS (output schema) ─────────────────────────────────────────
 STANDARD_COLS = [
