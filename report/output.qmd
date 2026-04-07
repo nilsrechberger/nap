@@ -14,7 +14,29 @@ Project structure
 #Use of GenAI: Petra & Khrys
 
 
-#Research question 3
+#Research questions
+
+Research Question 1
+
+Which countries and sources generate the most news coverage, and is there a geographic bias toward certain regions?
+
+Research Question 2
+
+How does article volume per topic category change over time—are certain topics more time-sensitive than others?
+
+Research Question 3
+
+Are the same topic categories covered equally across different language groups, or do some languages focus on specific themes?
+
+After running the pipeline for several days, we have realised that our dataset isn't well-suited for a time-series visualization to answer this question.
+
+78% of rows have no date.
+The rows that do have dates span less than 24 hours (April 1–2, 2026), with most articles concentrated in a single morning window.
+There's no multi-day or multi-week range to see trends or time-sensitivity patterns.
+
+To properly answer "how does volume change over time," would be better to have data collected over several weeks.
+For this reason, we will replace Research question 2 with:
+*How widely do news stories spread across sources, and which topics generate the most duplicated coverage?*
 ---
 title: "NAP"
 format: pdf
@@ -173,17 +195,5 @@ plt.show()
 
 
 ```
-For question number 2:
-Our dataset isn't well-suited for a time-series visualization to answer this question. Here's why:
 
-78% of rows have no date (1,803 out of 2,313 are missing pubDate and fetched_at).
-The rows that do have dates span less than 24 hours (April 1–2, 2026), with most articles concentrated in a single morning window.
-There's no multi-day or multi-week range to see trends or time-sensitivity patterns.
-
-To properly answer "how does volume change over time," we'd need data collected over several days or weeks. Here's what I'd suggest:
-Short term — if you want to make something with what you have now, the best option is a stacked bar chart of category distribution by hourly bins for the ~510 dated articles. It would show which topics peak at which hours, but the conclusions would be weak given the narrow window.
-Better approach — run your main() crawler on a daily schedule (e.g., via cron or Task Scheduler) for 1–2 weeks, then merge all the processed files. With that data, a streamgraph or stacked area chart showing daily article counts per category would clearly reveal which topics spike and fade (time-sensitive) versus which stay steady.
-
-We will replace q2 with:
-How widely do news stories spread across sources, and which topics generate the most duplicated coverage?
 
