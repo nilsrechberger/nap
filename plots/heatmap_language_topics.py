@@ -12,7 +12,7 @@ try:
 except NameError:
     BASE_DIR = os.getcwd()
 
-df = pd.read_csv(os.path.join(BASE_DIR, "data", "processed", "merged_data.csv"))
+df = pd.read_csv(os.path.join(BASE_DIR, "data", "processed", "merged data.csv"))
 
 df["category_list"] = df["category"].apply(
     lambda x: ast.literal_eval(x) if pd.notna(x) else []
