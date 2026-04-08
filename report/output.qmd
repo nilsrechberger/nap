@@ -1,11 +1,58 @@
 
 Project structure
 
-#Context and motivation: Nils
+# Context and motivation
+
+In an increasingly interconnected and information-driven society, news providers play a fundamental role as the primary gatekeepers of knowledge. By collecting, processing, and disseminating information from across the globe, these organizations significantly shape public discourse, societal values, and global awareness. Although journalistic standards traditionally emphasize objectivity and neutrality, the reality is that the tone, framing, and presentation of reporting are rarely entirely impartial. The narratives presented to the public can be subtly or overtly influenced by a myriad of complex factors, including:
+
+- Regional and cultural contexts: How local norms and societal values shape the interpretation of events.
+- Geopolitical dynamics: The impact of international relations and global conflicts on media narratives.
+- Governmental policies: Regulatory pressures, state censorship, or political affiliations.
+- Editorial slant: Institutional agendas and the inherent personal biases of journalists and publishers.
+
+Understanding and quantifying these biases is crucial for fostering media literacy and ensuring transparency in global information flows. However, the sheer volume and velocity of modern news make manual evaluation impractical, necessitating automated and scalable computational solutions.
+
+To address this challenge and systematically analyze these media biases, we introduce the News API Pipeline (N.A.P.). N.A.P. is a robust, automated framework that continuously fetches structured data from [NewsData.io](https://newsdata.io/login) and cleans it for advanced computational analysis. The system features a highly modular architecture, strategically designed to facilitate fast, efficient, and scalable feature integration.
+
+Using this pipeline, we successfully collect daily breaking news data from over 50 countries. This extensive reach yields a rich, high-dimensional dataset that encompasses a wide spectrum of news categories, topical focuses, and reporting styles. By leveraging this diverse corpus, N.A.P. provides a powerful foundation for cross-cultural comparisons, allowing researchers to conduct deep investigations into how the same global events are uniquely framed across different geopolitical landscapes.
 
 #Research Questions: Petra
 
-#Methodology (GIT architecture): Nils
+# Methodology
+
+N.A.P. is fundamentally designed around the classic ETL (Extract, Transform, Load) paradigm. The project features a highly modular architecture to ensure maximal flexibility, allowing researchers to independently update or scale the ingestion, processing, and reporting components without disrupting the overall system.
+
+## Repository Structure
+
+The codebase is organized to separate orchestration logic, modular source code, and analytical reporting:
+
+```bash
+.
+├── data                # Local storage for raw and processed data
+├── docs                # Project documentation and manuals
+├── LICENSE             # Project license
+├── main.py             # Central orchestration script
+├── plots               # Plot code and outputs
+├── _quarto.yaml        # Configuration for Quarto reporting
+├── README.md           # Project documentation
+├── report              # Quarto report dir for data analysis
+├── requirements.txt    # Python dependencies
+├── .env.example        # Template for environment variables
+└── src                 # Modularized source code (logic & modules)        
+```
+
+## Data Fetching
+
+The pipeline programmatically extracts global news data using the NewsData.io REST API. While the platform offers multiple endpoints for various use cases, N.A.P. specifically targets the "Latest News" endpoint (https://newsdata.io/api/1/latest?). This allows the system to capture a continuous stream of real-time breaking news. API authentication is handled securely via environment variables to ensure credentials remain protected during the fetching process.
+
+## Processing
+
+Because NewsData.io limits the volume and granularity of the delivered data depending on the active pricing plan, the raw payloads often contain sparse data, null values, or omitted fields. To ensure analytical rigor, N.A.P. includes a robust, custom-built data processor. This processing module is responsible for:
+
+- Parsing the raw JSON responses.
+- Identifying and filtering out incomplete or restricted records.
+- Normalizing data types and structures.
+- Delivering a clean, standardized dataset that is ready for downstream analysis.
 
 #Data Presentation: Petra & Khrys
 
