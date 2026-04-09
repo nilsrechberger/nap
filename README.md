@@ -15,15 +15,18 @@ N.A.P. (News API Pipeline) is a robust ETL (Extract, Transform, Load) solution t
 ## Project Structure
 
 ```bash
+.
 ├── data                # Local storage for raw and processed data
 ├── docs                # Project documentation and manuals
-├── src                 # Modularized source code (logic & modules)
+├── LICENSE             # Project license
 ├── main.py             # Central orchestration script
-├── report.qmd          # Quarto report for data analysis
+├── plots               # Plot code and outputs
 ├── _quarto.yaml        # Configuration for Quarto reporting
+├── README.md           # Project documentation
+├── report              # Quarto report dir for data analysis
 ├── requirements.txt    # Python dependencies
 ├── .env.example        # Template for environment variables
-└── README.md           # Project documentation
+└── src                 # Modularized source code (logic & modules)        
 ```
 
 ## Installation & Setup
@@ -65,13 +68,13 @@ API_KEY=YOUR_API_KEY_HERE
 To start the pipeline and execute the ETL process:
 
 ```bash
-python main.py
+python3 main.py
 ```
 
 To generate the analysis report using Quarto:
 
 ```bash
-quarto render report.qmd
+quarto render report/output.qmd
 ```
 
 ## License

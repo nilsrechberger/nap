@@ -1,41 +1,77 @@
----
-title: "NAP"
-authors: 
-         - "Nils Rechberger"
-         - "Khrysthyna Masliak"
-         -  "Petronela Tabalae"
-format: typst
-editor: visual
-execute:
-  echo: false
----
 
 Project structure
 
-# Context and motivation: Nils
+# Context and motivation
 
-# Research Questions: Petra
+In an increasingly interconnected and information-driven society, news providers play a fundamental role as the primary gatekeepers of knowledge. By collecting, processing, and disseminating information from across the globe, these organizations significantly shape public discourse, societal values, and global awareness. Although journalistic standards traditionally emphasize objectivity and neutrality, the reality is that the tone, framing, and presentation of reporting are rarely entirely impartial. The narratives presented to the public can be subtly or overtly influenced by a myriad of complex factors, including:
 
-# Methodology (GIT architecture): Nils
+- Regional and cultural contexts: How local norms and societal values shape the interpretation of events.
+- Geopolitical dynamics: The impact of international relations and global conflicts on media narratives.
+- Governmental policies: Regulatory pressures, state censorship, or political affiliations.
+- Editorial slant: Institutional agendas and the inherent personal biases of journalists and publishers.
 
-# Data Presentation: Petra & Khrys
+Understanding and quantifying these biases is crucial for fostering media literacy and ensuring transparency in global information flows. However, the sheer volume and velocity of modern news make manual evaluation impractical, necessitating automated and scalable computational solutions.
 
-# Outlook: Petra & Khrys
+To address this challenge and systematically analyze these media biases, we introduce the News API Pipeline (N.A.P.). N.A.P. is a robust, automated framework that continuously fetches structured data from [NewsData.io](https://newsdata.io/login) and cleans it for advanced computational analysis. The system features a highly modular architecture, strategically designed to facilitate fast, efficient, and scalable feature integration.
 
-# Use of GenAI: Petra & Khrys
+Using this pipeline, we successfully collect daily breaking news data from over 50 countries. This extensive reach yields a rich, high-dimensional dataset that encompasses a wide spectrum of news categories, topical focuses, and reporting styles. By leveraging this diverse corpus, N.A.P. provides a powerful foundation for cross-cultural comparisons, allowing researchers to conduct deep investigations into how the same global events are uniquely framed across different geopolitical landscapes.
+
+#Research Questions: Petra
+
+# Methodology
+
+N.A.P. is fundamentally designed around the classic ETL (Extract, Transform, Load) paradigm. The project features a highly modular architecture to ensure maximal flexibility, allowing researchers to independently update or scale the ingestion, processing, and reporting components without disrupting the overall system.
+
+## Repository Structure
+
+The codebase is organized to separate orchestration logic, modular source code, and analytical reporting:
+
+```bash
+.
+├── data                # Local storage for raw and processed data
+├── docs                # Project documentation and manuals
+├── LICENSE             # Project license
+├── main.py             # Central orchestration script
+├── plots               # Plot code and outputs
+├── _quarto.yaml        # Configuration for Quarto reporting
+├── README.md           # Project documentation
+├── report              # Quarto report dir for data analysis
+├── requirements.txt    # Python dependencies
+├── .env.example        # Template for environment variables
+└── src                 # Modularized source code (logic & modules)        
+```
+
+## Data Fetching
+
+The pipeline programmatically extracts global news data using the NewsData.io REST API. While the platform offers multiple endpoints for various use cases, N.A.P. specifically targets the "Latest News" endpoint (https://newsdata.io/api/1/latest?). This allows the system to capture a continuous stream of real-time breaking news. API authentication is handled securely via environment variables to ensure credentials remain protected during the fetching process.
+
+## Processing
+
+Because NewsData.io limits the volume and granularity of the delivered data depending on the active pricing plan, the raw payloads often contain sparse data, null values, or omitted fields. To ensure analytical rigor, N.A.P. includes a robust, custom-built data processor. This processing module is responsible for:
+
+- Parsing the raw JSON responses.
+- Identifying and filtering out incomplete or restricted records.
+- Normalizing data types and structures.
+- Delivering a clean, standardized dataset that is ready for downstream analysis.
+
+#Data Presentation: Petra & Khrys
+
+#Outlook: Petra & Khrys
+
+#Use of GenAI: Petra & Khrys
 
 
-# Research questions
+#Research questions
 
-- Research Question 1
+Research Question 1
 
 Which countries and sources generate the most news coverage, and is there a geographic bias toward certain regions?
 
-- Research Question 2
+Research Question 2
 
 How does article volume per topic category change over time—are certain topics more time-sensitive than others?
 
-- Research Question 3
+Research Question 3
 
 Are the same topic categories covered equally across different language groups, or do some languages focus on specific themes?
 
@@ -47,113 +83,98 @@ There's no multi-day or multi-week range to see trends or time-sensitivity patte
 
 To properly answer "how does volume change over time," would be better to have data collected over several weeks.
 For this reason, we will replace Research question 2 with:
-**How widely do news stories spread across sources, and which topics generate the most duplicated coverage?**
-
+*How widely do news stories spread across sources, and which topics generate the most duplicated coverage?*
+---
+title: "NAP"
+format: pdf
+editor: visual
+---
 #Topic coverage by Language
 
 ```{python}
 #| echo: false
-# Research Question 3
 
 import pandas as pd
 import ast
 import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
 import numpy as np
-import os
-from matplotlib.colors import LinearSegmentedColormap
-from scipy.cluster.hierarchy import linkage, leaves_list
-from scipy.spatial.distance import pdist
+from pathlib import Path
 
 
 # ── 1. Load & parse ──────────────────────────────────────────────────────────
-try:
-    BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-except NameError:
-    BASE_DIR = os.path.dirname(os.getcwd())  # goes up from report/ to nap/
+BASE = Path().resolve()  
+df = pd.read_csv(BASE / "data" / "raw" / "raw_data_2026-04-02.csv")
 
-df = pd.read_csv(os.path.join(BASE_DIR, "data", "processed", "merged data.csv"))
 
 df["category_list"] = df["category"].apply(
     lambda x: ast.literal_eval(x) if pd.notna(x) else []
 )
 df_exp = df.explode("category_list")
+df_exp = df_exp[df_exp["category_list"] != "top"]          # 'top' is a flag, not a topic
 df_exp["cat"] = df_exp["category_list"].str.strip().str.lower()
-df_exp = df_exp[df_exp["cat"].notna() & (df_exp["cat"] != "")]
 
 # ── 2. Filter ─────────────────────────────────────────────────────────────────
-ALL_CATS = [
-    "lifestyle", "business", "sports", "entertainment",
-    "politics", "world", "technology"
-]
+MAIN_CATS = ["lifestyle", "sports", "business", "entertainment",
+             "technology", "world", "politics"]
 
 lang_counts = df["language"].value_counts()
 valid_langs = lang_counts[lang_counts >= 5].index.tolist()
 
 df_filt = df_exp[
     df_exp["language"].isin(valid_langs) &
-    df_exp["cat"].isin(ALL_CATS)
+    df_exp["cat"].isin(MAIN_CATS)
 ]
 
 # ── 3. Build normalized pivot (% per language) ────────────────────────────────
 pivot = df_filt.groupby(["language", "cat"]).size().unstack(fill_value=0)
-for c in ALL_CATS:
+for c in MAIN_CATS:                                        # ensure column order
     if c not in pivot.columns:
         pivot[c] = 0
-pivot = pivot[ALL_CATS]
+pivot = pivot[MAIN_CATS]
 
 pivot_pct = pivot.div(pivot.sum(axis=1), axis=0) * 100
 
-# ── 3b. Cluster languages by coverage pattern ─────────────────────────────────
-# Hierarchical clustering groups languages with similar category profiles.
-if len(pivot_pct) > 2:
-    row_linkage = linkage(pdist(pivot_pct.values, metric="euclidean"), method="average")
-    row_order = leaves_list(row_linkage)
-    pivot_pct = pivot_pct.iloc[row_order]
+# Sort languages by dominant category (lifestyle share, descending)
+pivot_pct = pivot_pct.sort_values("lifestyle", ascending=True)
 
 # ── 4. Figure layout ──────────────────────────────────────────────────────────
 N_LANGS = len(pivot_pct)
-N_CATS = len(ALL_CATS)
+N_CATS  = len(MAIN_CATS)
 
-fig, ax = plt.subplots(figsize=(16, 10))
-fig.patch.set_facecolor("white")
-ax.set_facecolor("white")
+fig, ax = plt.subplots(figsize=(13, 9))
+fig.patch.set_facecolor("#0F1117")
+ax.set_facecolor("#0F1117")
 
 # ── 5. Colour scale ───────────────────────────────────────────────────────────
+from matplotlib.colors import LinearSegmentedColormap
+
 cmap = LinearSegmentedColormap.from_list(
     "news",
-    ["#f0f4ff", "#c8ddf5", "#85b7eb", "#3a8fd4", "#1e5799", "#0d2f5e"],
+    ["#0F1117", "#1a2a4a", "#1e5799", "#3a8fd4", "#7ec8f5", "#c8eaff"],
     N=256,
 )
 
 data = pivot_pct.values
-im = ax.imshow(data, cmap=cmap, aspect="auto", vmin=0, vmax=65)
+im = ax.imshow(data, cmap=cmap, aspect="auto", vmin=0, vmax=100)
 
 # ── 6. Annotate cells ─────────────────────────────────────────────────────────
 for r in range(N_LANGS):
     for c in range(N_CATS):
         val = data[r, c]
         if val == 0:
-            txt = "·"
-            color = "#999999"
-            alpha = 0.6
-            fontweight = "normal"
+            txt, alpha = "·", 0.25
         else:
-            txt = f"{val:.0f}%"
-            # High contrast: white on dark cells, dark navy on light cells
-            if val > 35:
-                color = "#ffffff"
-            else:
-                color = "#0a1f3d"
-            alpha = 1.0
-            fontweight = "bold" if val > 10 else "normal"
+            txt, alpha = f"{val:.0f}%", 1.0
+        color = "#ffffff" if val > 45 else ("#7ec8f5" if val > 15 else "#4a6a8a")
         ax.text(c, r, txt, ha="center", va="center",
-                fontsize=8, color=color, alpha=alpha, fontweight=fontweight)
+                fontsize=8.5, color=color, alpha=alpha, fontweight="normal")
 
 # ── 7. Axes labels ────────────────────────────────────────────────────────────
 ax.set_xticks(range(N_CATS))
 ax.set_xticklabels(
-    [c.capitalize() for c in ALL_CATS],
-    color="#333333", fontsize=9, fontweight="semibold"
+    [c.capitalize() for c in MAIN_CATS],
+    color="#a0b8d0", fontsize=10, fontweight="normal"
 )
 ax.xaxis.set_ticks_position("top")
 ax.xaxis.set_label_position("top")
@@ -161,98 +182,65 @@ ax.xaxis.set_label_position("top")
 ax.set_yticks(range(N_LANGS))
 ax.set_yticklabels(
     pivot_pct.index.str.capitalize(),
-    color="#333333", fontsize=9.5
+    color="#c8d8e8", fontsize=9.5
 )
 
 # Article-count badge on the right
 ax2 = ax.twinx()
-ax2.set_facecolor("white")
+ax2.set_facecolor("#0F1117")
 ax2.set_ylim(ax.get_ylim())
 ax2.set_yticks(range(N_LANGS))
 ax2.set_yticklabels(
     [f"n={lang_counts[lang]}" for lang in pivot_pct.index],
-    color="#888888", fontsize=7.5
+    color="#4a6a8a", fontsize=8
 )
 ax2.tick_params(length=0)
 ax2.spines[:].set_visible(False)
 
 # ── 8. Grid lines ─────────────────────────────────────────────────────────────
 for x in np.arange(-0.5, N_CATS, 1):
-    ax.axvline(x, color="#e0e0e0", linewidth=0.7)
+    ax.axvline(x, color="#1e2a3a", linewidth=0.7)
 for y in np.arange(-0.5, N_LANGS, 1):
-    ax.axhline(y, color="#e0e0e0", linewidth=0.7)
+    ax.axhline(y, color="#1e2a3a", linewidth=0.7)
 
-ax.tick_params(length=0, colors="#333333")
+ax.tick_params(length=0)
 for spine in ax.spines.values():
     spine.set_visible(False)
 
 # ── 9. Colour bar ─────────────────────────────────────────────────────────────
-cbar_ax = fig.add_axes([0.95, 0.15, 0.012, 0.50])
+cbar_ax = fig.add_axes([0.92, 0.15, 0.015, 0.55])
 cbar = fig.colorbar(im, cax=cbar_ax)
-cbar.ax.set_facecolor("white")
-cbar.ax.yaxis.set_tick_params(color="#666666", labelsize=7.5)
-cbar.outline.set_edgecolor("#e0e0e0")
-plt.setp(cbar.ax.yaxis.get_ticklabels(), color="#666666")
-cbar.set_label("% of language's articles", color="#666666", fontsize=8, labelpad=8)
-cbar.set_ticks([0, 15, 30, 45, 60])
-cbar.set_ticklabels(["0%", "15%", "30%", "45%", "60%+"])
+cbar.ax.set_facecolor("#0F1117")
+cbar.ax.yaxis.set_tick_params(color="#4a6a8a", labelsize=8)
+cbar.outline.set_edgecolor("#1e2a3a")
+plt.setp(cbar.ax.yaxis.get_ticklabels(), color="#4a6a8a")
+cbar.set_label("% of language's articles", color="#4a6a8a", fontsize=8, labelpad=8)
+cbar.set_ticks([0, 25, 50, 75, 100])
+cbar.set_ticklabels(["0%", "25%", "50%", "75%", "100%"])
 
 # ── 10. Titles & footnote ─────────────────────────────────────────────────────
 fig.text(
     0.06, 0.97,
-    "CROSS-LANGUAGE NEWS ANALYSIS",
-    color="#3a8fd4", fontsize=9, fontweight="bold", va="top"
-)
-fig.text(
-    0.06, 0.94,
     "Topic Coverage by Language",
-    color="#1a1a1a", fontsize=18, fontweight="bold", va="top"
+    color="#e8f0f8", fontsize=16, fontweight="normal", va="top"
 )
 fig.text(
-    0.06, 0.91,
-    "Each cell shows what percentage of a language's articles fall into a given category  ·  Languages clustered by coverage similarity",
-    color="#666666", fontsize=8.5, va="top"
+    0.06, 0.93,
+    "Share of each language's articles per topic category  ·  Sorted by Lifestyle share (ascending)",
+    color="#4a6a8a", fontsize=9, va="top"
 )
 fig.text(
     0.06, 0.03,
-    f"Source: newsdata.io  ·  {df.shape[0]} articles  ·  {len(valid_langs)} languages  ·  Languages with < 5 articles excluded",
-    color="#aaaaaa", fontsize=7.5, va="bottom"
+    f"Source: newsdata.io  ·  {df.shape[0]} articles  ·  {len(valid_langs)} languages  ·  2026-04-02  ·  Languages with < 5 articles excluded",
+    color="#2e4055", fontsize=7.5, va="bottom"
 )
 
-plt.subplots_adjust(left=0.11, right=0.91, top=0.85, bottom=0.06)
+plt.subplots_adjust(left=0.12, right=0.90, top=0.88, bottom=0.06)
 
-# ── 11. Save & show ───────────────────────────────────────────────────────────
-output_path = os.path.join(BASE_DIR, "plots", "language_category_heatmap.png")
-os.makedirs(os.path.dirname(output_path), exist_ok=True)
-fig.savefig(output_path, dpi=200, bbox_inches="tight", facecolor="white")
-print(f"Saved to {output_path}")
-
+# ── 11. Show plot ──────────────────────────────────────────────────────────────────
 plt.show()
 
 
 ```
-**Interpretation**:
 
-The heatmap reveals several patterns in how topic coverage varies across languages, though some of these patterns likely reflect characteristics of the data source rather than genuine differences in journalism.
-**English shows a distinctive coverage profile**. English is the only language in the dataset with a relatively balanced distribution across categories, with business (33%), politics (25%), sports (14%), and 
-technology (12%) all well represented. This is also the largest sample in the dataset (n=1,398), which suggests the pattern is reliable rather than an artifact of sample size. The hierarchical clustering places English on its own branch, separate from all other languages, which is consistent with this observation.
-
-**Most other languages are dominated by the lifestyle category**. Looking at the Lifestyle column, the majority of languages have lifestyle as their top category, often at 60% or higher. 
-Persian (100%), Italian (96%), and Swahili (94%) are the most extreme cases. This pattern is unlikely to reflect real editorial priorities across dozens of languages, and more likely indicates either a bias in 
-how newsdata.io sources non-English content or a default tagging behavior for uncategorized articles. This limitation should be taken into account when interpreting the rest of the results.
-The clustering identifies meaningful sub-groups within the lifestyle-dominant languages. Despite the overall lifestyle skew, the algorithm successfully groups languages with similar secondary patterns:
-
-A lifestyle-and-sports group (Arabic, Greek, Bulgarian, Dutch, Korean, Spanish, Croatian, Russian) where sports is a consistent secondary category between 10% and 35%.
-A near-pure lifestyle group (Persian, Italian, Swahili) where lifestyle accounts for nearly all articles.
-A lifestyle-and-world-news group (Khmer, Chinese, Bosnian, French) where world news appears as a notable secondary category, with Khmer showing the highest share at 32%.
-
-**A few languages break the lifestyle pattern entirely**. Japanese, Catalan, and Hausa appear at the bottom of the chart with sports and entertainment as their dominant categories. 
-However, all three have small sample sizes (n=13, 21, and 17 respectively), so these percentages are sensitive to individual articles and should be interpreted with caution.
-
-**Limitations**. Several languages in the dataset have fewer than 30 articles, which makes their percentages unreliable. Persian in particular has only 5 articles, meaning a single article 
-represents 20% of its distribution. A more robust analysis would raise the minimum article threshold to at least 20 or 30 articles per language. Additionally, the dominance of the lifestyle category 
-across most non-English languages suggests a data collection bias that would need to be investigated before drawing substantive conclusions about cross-language differences in news coverage.
-
-**Conclusion**. The main finding from this visualization is less about differences between languages and more about the structure
-of the dataset itself: English coverage is categorically different from all other languages, and the lifestyle category is heavily over-represented in non-English content in ways that likely reflect the data source rather than real journalistic patterns. Future work should focus on understanding and correcting for these sourcing effects before attempting to characterize genuine cross-language differences.
 
