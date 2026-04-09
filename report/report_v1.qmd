@@ -1,0 +1,258 @@
+---
+title: "NAP"
+authors:
+  - "Nils Rechberger"
+  - "Khrysthyna Masliak"
+  - "Petronela Tabalae"
+date: today
+format:
+  typst:
+    toc: true
+    toc-depth: 2
+    number-sections: true
+editor: visual
+execute:
+  echo: false
+  warning: false
+  message: false
+---
+
+# Context and motivation
+
+*Author: Nils*
+
+# Research Questions
+
+*Author: Petra*
+
+This project investigates patterns in global news coverage using data collected from the newsdata.io API. We began with three research questions:
+
+1.  **Geographic distribution.** Which countries and sources generate the most news coverage, and is there a geographic bias toward certain regions?
+2.  **Temporal dynamics.** How does article volume per topic category change over time — are certain topics more time-sensitive than others?
+3.  **Cross-language coverage.** Are the same topic categories covered equally across different language groups, or do some languages focus on specific themes?
+
+## Revision to Research Question 2
+
+After running the data collection pipeline for several days, we determined that our dataset was not suitable for a time-series analysis. Specifically, 78% of rows had no date field, and the remaining dated rows spanned less than 24 hours (April 1–2, 2026), with most articles concentrated in a single morning window. Without a multi-day or multi-week range, it is not possible to observe meaningful trends or identify time-sensitive topics. A proper answer to the original question would require data collected over several weeks.
+
+For this reason, we replaced Research Question 2 with:
+
+> **How widely do news stories spread across sources, and which topics generate the most duplicated coverage?**
+
+This revised question can be answered with a single snapshot of data and preserves the spirit of the original — understanding how topics behave in the news ecosystem — without requiring longitudinal collection.
+
+# Methodology (Git architecture)
+
+*Author: Nils*
+
+# Data Presentation
+
+*Authors: Petra & Khrys*
+
+## Topic coverage by language
+
+```{python}
+#| label: fig-heatmap
+#| fig-cap: "Topic coverage by language. Each cell shows the percentage of a language's articles that fall into a given category. Languages are ordered by hierarchical clustering on their category profiles, so languages with similar coverage patterns appear adjacent."
+
+import pandas as pd
+import ast
+import matplotlib.pyplot as plt
+import numpy as np
+import os
+from matplotlib.colors import LinearSegmentedColormap
+from scipy.cluster.hierarchy import linkage, leaves_list
+from scipy.spatial.distance import pdist
+
+
+# ── 1. Load & parse ──────────────────────────────────────────────────────────
+try:
+    BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+except NameError:
+    BASE_DIR = os.path.dirname(os.getcwd())  # goes up from report/ to nap/
+
+df = pd.read_csv(os.path.join(BASE_DIR, "data", "processed", "merged data.csv"))
+
+df["category_list"] = df["category"].apply(
+    lambda x: ast.literal_eval(x) if pd.notna(x) else []
+)
+df_exp = df.explode("category_list")
+df_exp["cat"] = df_exp["category_list"].str.strip().str.lower()
+df_exp = df_exp[df_exp["cat"].notna() & (df_exp["cat"] != "")]
+
+# ── 2. Filter ─────────────────────────────────────────────────────────────────
+ALL_CATS = [
+    "lifestyle", "business", "sports", "entertainment",
+    "politics", "world", "technology"
+]
+
+lang_counts = df["language"].value_counts()
+valid_langs = lang_counts[lang_counts >= 5].index.tolist()
+
+df_filt = df_exp[
+    df_exp["language"].isin(valid_langs) &
+    df_exp["cat"].isin(ALL_CATS)
+]
+
+# ── 3. Build normalized pivot (% per language) ────────────────────────────────
+pivot = df_filt.groupby(["language", "cat"]).size().unstack(fill_value=0)
+for c in ALL_CATS:
+    if c not in pivot.columns:
+        pivot[c] = 0
+pivot = pivot[ALL_CATS]
+
+pivot_pct = pivot.div(pivot.sum(axis=1), axis=0) * 100
+
+# ── 3b. Cluster languages by coverage pattern ─────────────────────────────────
+if len(pivot_pct) > 2:
+    row_linkage = linkage(pdist(pivot_pct.values, metric="euclidean"), method="average")
+    row_order = leaves_list(row_linkage)
+    pivot_pct = pivot_pct.iloc[row_order]
+
+# ── 4. Figure layout ──────────────────────────────────────────────────────────
+N_LANGS = len(pivot_pct)
+N_CATS = len(ALL_CATS)
+
+fig, ax = plt.subplots(figsize=(16, 10))
+fig.patch.set_facecolor("white")
+ax.set_facecolor("white")
+
+# ── 5. Colour scale ───────────────────────────────────────────────────────────
+cmap = LinearSegmentedColormap.from_list(
+    "news",
+    ["#f0f4ff", "#c8ddf5", "#85b7eb", "#3a8fd4", "#1e5799", "#0d2f5e"],
+    N=256,
+)
+
+data = pivot_pct.values
+im = ax.imshow(data, cmap=cmap, aspect="auto", vmin=0, vmax=65)
+
+# ── 6. Annotate cells ─────────────────────────────────────────────────────────
+for r in range(N_LANGS):
+    for c in range(N_CATS):
+        val = data[r, c]
+        if val == 0:
+            txt = "·"
+            color = "#999999"
+            alpha = 0.6
+            fontweight = "normal"
+        else:
+            txt = f"{val:.0f}%"
+            if val > 35:
+                color = "#ffffff"
+            else:
+                color = "#0a1f3d"
+            alpha = 1.0
+            fontweight = "bold" if val > 10 else "normal"
+        ax.text(c, r, txt, ha="center", va="center",
+                fontsize=8, color=color, alpha=alpha, fontweight=fontweight)
+
+# ── 7. Axes labels ────────────────────────────────────────────────────────────
+ax.set_xticks(range(N_CATS))
+ax.set_xticklabels(
+    [c.capitalize() for c in ALL_CATS],
+    color="#333333", fontsize=9, fontweight="semibold"
+)
+ax.xaxis.set_ticks_position("top")
+ax.xaxis.set_label_position("top")
+
+ax.set_yticks(range(N_LANGS))
+ax.set_yticklabels(
+    pivot_pct.index.str.capitalize(),
+    color="#333333", fontsize=9.5
+)
+
+# Article-count badge on the right
+ax2 = ax.twinx()
+ax2.set_facecolor("white")
+ax2.set_ylim(ax.get_ylim())
+ax2.set_yticks(range(N_LANGS))
+ax2.set_yticklabels(
+    [f"n={lang_counts[lang]}" for lang in pivot_pct.index],
+    color="#888888", fontsize=7.5
+)
+ax2.tick_params(length=0)
+ax2.spines[:].set_visible(False)
+
+# ── 8. Grid lines ─────────────────────────────────────────────────────────────
+for x in np.arange(-0.5, N_CATS, 1):
+    ax.axvline(x, color="#e0e0e0", linewidth=0.7)
+for y in np.arange(-0.5, N_LANGS, 1):
+    ax.axhline(y, color="#e0e0e0", linewidth=0.7)
+
+ax.tick_params(length=0, colors="#333333")
+for spine in ax.spines.values():
+    spine.set_visible(False)
+
+# ── 9. Colour bar ─────────────────────────────────────────────────────────────
+cbar_ax = fig.add_axes([0.95, 0.15, 0.012, 0.50])
+cbar = fig.colorbar(im, cax=cbar_ax)
+cbar.ax.set_facecolor("white")
+cbar.ax.yaxis.set_tick_params(color="#666666", labelsize=7.5)
+cbar.outline.set_edgecolor("#e0e0e0")
+plt.setp(cbar.ax.yaxis.get_ticklabels(), color="#666666")
+cbar.set_label("% of language's articles", color="#666666", fontsize=8, labelpad=8)
+cbar.set_ticks([0, 15, 30, 45, 60])
+cbar.set_ticklabels(["0%", "15%", "30%", "45%", "60%+"])
+
+# ── 10. Titles & footnote ─────────────────────────────────────────────────────
+fig.text(
+    0.06, 0.97,
+    "CROSS-LANGUAGE NEWS ANALYSIS",
+    color="#3a8fd4", fontsize=9, fontweight="bold", va="top"
+)
+fig.text(
+    0.06, 0.94,
+    "Topic Coverage by Language",
+    color="#1a1a1a", fontsize=18, fontweight="bold", va="top"
+)
+fig.text(
+    0.06, 0.91,
+    "Each cell shows what percentage of a language's articles fall into a given category  ·  Languages clustered by coverage similarity",
+    color="#666666", fontsize=8.5, va="top"
+)
+fig.text(
+    0.06, 0.03,
+    f"Source: newsdata.io  ·  {df.shape[0]} articles  ·  {len(valid_langs)} languages  ·  Languages with < 5 articles excluded",
+    color="#aaaaaa", fontsize=7.5, va="bottom"
+)
+
+plt.subplots_adjust(left=0.11, right=0.91, top=0.85, bottom=0.06)
+
+# ── 11. Save figure ───────────────────────────────────────────────────────────
+output_path = os.path.join(BASE_DIR, "plots", "language_category_heatmap.png")
+os.makedirs(os.path.dirname(output_path), exist_ok=True)
+fig.savefig(output_path, dpi=200, bbox_inches="tight", facecolor="white")
+```
+
+### Interpretation
+
+@fig-heatmap reveals several patterns in how topic coverage varies across languages, though some of these patterns likely reflect characteristics of the data source rather than genuine differences in journalism.
+
+**English shows a distinctive coverage profile.** English is the only language in the dataset with a relatively balanced distribution across categories, with business (33%), politics (25%), sports (14%), and technology (12%) all well represented. This is also the largest sample in the dataset (n = 1,398), which suggests the pattern is reliable rather than an artifact of sample size. The hierarchical clustering places English on its own branch, separate from all other languages, which is consistent with this observation.
+
+**Most other languages are dominated by the lifestyle category.** Looking at the Lifestyle column, the majority of languages have lifestyle as their top category, often at 60% or higher. Persian (100%), Italian (96%), and Swahili (94%) are the most extreme cases. This pattern is unlikely to reflect real editorial priorities across dozens of languages, and more likely indicates either a bias in how newsdata.io sources non-English content or a default tagging behavior for uncategorized articles. This limitation should be taken into account when interpreting the rest of the results.
+
+**The clustering identifies meaningful sub-groups within the lifestyle-dominant languages.** Despite the overall lifestyle skew, the algorithm successfully groups languages with similar secondary patterns:
+
+-   A **lifestyle-and-sports group** (Arabic, Greek, Bulgarian, Dutch, Korean, Spanish, Croatian, Russian) where sports is a consistent secondary category between 10% and 35%.
+-   A **near-pure lifestyle group** (Persian, Italian, Swahili) where lifestyle accounts for nearly all articles.
+-   A **lifestyle-and-world-news group** (Khmer, Chinese, Bosnian, French) where world news appears as a notable secondary category, with Khmer showing the highest share at 32%.
+
+**A few languages break the lifestyle pattern entirely.** Japanese, Catalan, and Hausa appear at the bottom of the chart with sports and entertainment as their dominant categories. However, all three have small sample sizes (n = 13, 21, and 17 respectively), so these percentages are sensitive to individual articles and should be interpreted with caution.
+
+### Limitations
+
+Several languages in the dataset have fewer than 30 articles, which makes their percentages unreliable. Persian in particular has only 5 articles, meaning a single article represents 20% of its distribution. A more robust analysis would raise the minimum article threshold to at least 20 or 30 articles per language. Additionally, the dominance of the lifestyle category across most non-English languages suggests a data collection bias that would need to be investigated before drawing substantive conclusions about cross-language differences in news coverage.
+
+### Conclusion
+
+The main finding from this visualization is less about differences between languages and more about the structure of the dataset itself: English coverage is categorically different from all other languages, and the lifestyle category is heavily over-represented in non-English content in ways that likely reflect the data source rather than real journalistic patterns. Future work should focus on understanding and correcting for these sourcing effects before attempting to characterize genuine cross-language differences.
+
+# Outlook
+
+*Authors: Petra & Khrys*
+
+# Use of GenAI
+
+*Authors: Petra & Khrys*
