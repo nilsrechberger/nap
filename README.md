@@ -68,6 +68,8 @@ To start the pipeline and execute the ETL process:
 
 ```bash
 python3 main.py
+python3 src/processor.py
+python3 src/merge.py
 ```
 
 To generate the analysis report using Quarto:
@@ -75,6 +77,21 @@ To generate the analysis report using Quarto:
 ```bash
 quarto render report/output.qmd
 ```
+## Code Contributions
+
+### Nils Rechberger
+
+Nils served as the technical lead for the project. He was responsible for managing the GitHub repository, overseeing pull requests, and ensuring code quality. Additionally, he developed both the Proof of Concept (POC) and the Minimum Viable Product (MVP).
+
+### Petronela Tabalae
+
+Petronela held a hybrid role, bridging the gap between technical implementation and academic documentation. She was primarily responsible for coding the plots, authoring the final report and refining the team’s written deliverables.
+
+### Khrystyna Masliak
+
+Khrystyna was responsible for refining and scaling the final codebase. She extended the MVP’s scope, implemented large-scale data export functionality, and managed the data merging process.
+
+> Note: Petronela and Khrystyna worked collaboratively on-site; as a result, some of Khrystyna’s contributions are reflected in shared commits rather than individual ones.
 
 ## License
 
