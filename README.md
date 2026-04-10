@@ -77,6 +77,7 @@ To generate the analysis report using Quarto:
 ```bash
 quarto render report/output.qmd
 ```
+
 ## Code Contributions
 
 ### Nils Rechberger
