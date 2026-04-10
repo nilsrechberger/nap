@@ -25,7 +25,6 @@ N.A.P. (News API Pipeline) is a robust ETL (Extract, Transform, Load) solution t
 ├── README.md           # Project documentation
 ├── report              # Quarto report dir for data analysis
 ├── requirements.txt    # Python dependencies
-├── .env.example        # Template for environment variables
 └── src                 # Modularized source code (logic & modules)        
 ```
 
@@ -57,7 +56,7 @@ pip install -r requirements.txt
 
 ### 3. Configuration
 
-Create a .env file in the root directory (refer to .env.example):
+Create a .env file in the root directory:
 
 ```txt
 API_KEY=YOUR_API_KEY_HERE
@@ -80,3 +79,4 @@ quarto render report/output.qmd
 ## License
 
 This project is licensed under the MIT License.
+
