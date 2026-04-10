@@ -2,14 +2,18 @@
 title: "News API Pipeline"
 authors:
   - "Nils Rechberger"
-  - "Khrysthyna Masliak"
+  - "Khrystyna Masliak"
   - "Petronela Tabalae"
 date: today
 format:
   typst:
-    toc: true
-    toc-depth: 2
+    toc: false
     number-sections: false
+    margin:
+      x: 2cm
+      y: 2cm
+    fontsize: 10pt
+    mainfont: "Libertinus Serif"
 editor: visual
 execute:
   echo: false
@@ -17,9 +21,7 @@ execute:
   message: false
 ---
 
-Project structure
-
-# Context and motivation
+# Context and Motivation
 
 In an increasingly interconnected and information-driven society, news providers play a fundamental role as the primary gatekeepers of knowledge. By collecting, processing, and disseminating information from across the globe, these organizations significantly shape public discourse, societal values, and global awareness. Although journalistic standards traditionally emphasize objectivity and neutrality, the reality is that the tone, framing, and presentation of reporting are rarely entirely impartial. The narratives presented to the public can be subtly or overtly influenced by a myriad of complex factors, including:
 
@@ -30,45 +32,31 @@ In an increasingly interconnected and information-driven society, news providers
 
 Understanding and quantifying these biases is crucial for fostering media literacy and ensuring transparency in global information flows. However, the sheer volume and velocity of modern news make manual evaluation impractical, necessitating automated and scalable computational solutions.
 
-To address this challenge and systematically analyze these media biases, we introduce the News API Pipeline (N.A.P.). N.A.P. is a robust, automated framework that continuously fetches structured data from [NewsData.io](https://newsdata.io/login) and cleans it for advanced computational analysis. The system features a highly modular architecture, strategically designed to facilitate fast, efficient, and scalable feature integration.
-
-Using this pipeline, we successfully collect daily breaking news data from over 50 countries. This extensive reach yields a rich, high-dimensional dataset that encompasses a wide spectrum of news categories, topical focuses, and reporting styles. By leveraging this diverse corpus, N.A.P. provides a powerful foundation for cross-cultural comparisons, allowing researchers to conduct deep investigations into how the same global events are uniquely framed across different geopolitical landscapes.
+We introduce the **News API Pipeline (N.A.P.)**, an automated, modular framework that continuously fetches and cleans structured data from [NewsData.io](https://newsdata.io/login). It collects daily breaking news from over 100 countries, producing a high-dimensional corpus of categories, topics, and styles suitable for cross-cultural comparisons of how the same events are framed in different regions.
 
 # Methodology
 
-N.A.P. is fundamentally designed around the classic ETL (Extract, Transform, Load) paradigm. The project features a highly modular architecture to ensure maximal flexibility, allowing researchers to independently update or scale the ingestion, processing, and reporting components without disrupting the overall system.
+N.A.P. is fundamentally designed around the **classic ETL (Extract, Transform, Load)** paradigm. The project features a highly modular architecture to ensure maximal flexibility, allowing researchers to independently update or scale the ingestion, processing, and reporting components without disrupting the overall system.
+
 
 ## Repository Structure
 
-The codebase is organized to separate orchestration logic, modular source code, and analytical reporting:
-
 ```bash
 .
-├── data                # Local storage for raw and processed data
-├── docs                # Project documentation and manuals
-├── LICENSE             # Project license
-├── main.py             # Central orchestration script
-├── plots               # Plot code and outputs
-├── _quarto.yaml        # Configuration for Quarto reporting
-├── README.md           # Project documentation
-├── report              # Quarto report dir for data analysis
-├── requirements.txt    # Python dependencies
-├── .env.example        # Template for environment variables
-└── src                 # Modularized source code (logic & modules)        
+├── data          # Raw and processed data
+├── docs          # Documentation
+├── main.py       # Orchestration script
+├── plots         # Plot code and outputs
+├── report        # Quarto report
+├── src           # Modularized source code
+├── _quarto.yaml  # Quarto configuration
+└── requirements.txt
 ```
 
-## Data Fetching
+## Data Fetching and Processing
 
-The pipeline programmatically extracts global news data using the NewsData.io REST API. While the platform offers multiple endpoints for various use cases, N.A.P. specifically targets the "Latest News" endpoint (https://newsdata.io/api/1/latest?). This allows the system to capture a continuous stream of real-time breaking news. API authentication is handled securely via environment variables to ensure credentials remain protected during the fetching process.
-
-## Processing
-
-Because NewsData.io limits the volume and granularity of the delivered data depending on the active pricing plan, the raw payloads often contain sparse data, null values, or omitted fields. To ensure analytical rigor, N.A.P. includes a robust, custom-built data processor. This processing module is responsible for:
-
-- Parsing the raw JSON responses.
-- Identifying and filtering out incomplete or restricted records.
-- Normalizing data types and structures.
-- Delivering a clean, standardized dataset that is ready for downstream analysis.
+The pipeline extracts global news from NewsData.io's *Latest News* endpoint, capturing a continuous stream of breaking stories;
+API credentials are stored as environment variables. Because the free tier returns sparse payloads with null fields, a custom processor parses raw JSON, filters incomplete records, normalizes types, and outputs a clean dataset ready for analysis.
 
 # Research Questions
 
@@ -78,23 +66,468 @@ This project investigates patterns in global news coverage using data collected 
 2.  **Temporal dynamics.** How does article volume per topic category change over time — are certain topics more time-sensitive than others?
 3.  **Cross-language coverage.** Are the same topic categories covered equally across different language groups, or do some languages focus on specific themes?
 
-## Revision to Research Question 2
-
-After running the data collection pipeline for several days, we determined that our dataset was not suitable for a time-series analysis. Specifically, 78% of rows had no date field, and the remaining dated rows spanned less than 24 hours (April 1–2, 2026), with most articles concentrated in a single morning window. Without a multi-day or multi-week range, it is not possible to observe meaningful trends or identify time-sensitive topics. A proper answer to the original question would require data collected over several weeks.
-
-For this reason, we replaced Research Question 2 with:
-
-> **How widely do news stories spread across sources, and which topics generate the most duplicated coverage?**
-
-This revised question can be answered with a single snapshot of data and preserves the spirit of the original — understanding how topics behave in the news ecosystem — without requiring longitudinal collection.
+**Revision to RQ2.** After running the data collection pipeline for several days, we determined that our dataset was not suitable for a time-series analysis. Without a multi-day or multi-week range, it is not possible to observe meaningful trends or identify time-sensitive topics. 
+A proper answer to the original question would require data collected over several weeks. For that reason we replaced RQ2 with: *How widely do stories spread across sources, and which topics generate the most duplicated coverage?* 
+This preserves the spirit of the original without requiring longitudinal data.
 
 # Data Presentation
 
-## Topic coverage by language
+## RQ1 — Geographic Distribution
 
 ```{python}
-#| label: fig-heatmap
-#| fig-cap: "Topic coverage by language. Each cell shows the percentage of a language's articles that fall into a given category. Languages are ordered by hierarchical clustering on their category profiles, so languages with similar coverage patterns appear adjacent."
+#| label: plot-geo
+#| fig-width: 12
+#| fig-height: 6
+# Built-in
+import ast
+import os
+import re
+import warnings
+from pathlib import Path
+
+# Data handling
+import numpy as np
+import pandas as pd
+
+# Visualisation
+import matplotlib
+import matplotlib.colors as mcolors
+import matplotlib.pyplot as plt
+
+# Geospatial
+import geopandas as gpd
+import pyogrio
+
+warnings.filterwarnings("ignore")
+
+
+# ── PATHS ─────────────────────────────────────────────────────────────────────
+DATA_PATH = Path("../data/processed/merged data.csv")
+
+
+# ── CONSTANTS ─────────────────────────────────────────────────────────────────
+COLS = [
+    "article_id", "link", "title", "description", "keywords", "creator",
+    "language", "country", "category", "datatype", "pubDate", "pubDateTZ",
+    "fetched_at", "image_url", "video_url", "source_id", "source_name",
+    "source_priority", "source_url", "source_icon", "duplicate", "source_date",
+]
+
+REGION_MAP = {
+    "austria": "Europe", "germany": "Europe", "france": "Europe",
+    "united kingdom": "Europe", "spain": "Europe", "italy": "Europe",
+    "netherlands": "Europe", "netherland": "Europe", "switzerland": "Europe",
+    "belgium": "Europe", "sweden": "Europe", "poland": "Europe",
+    "portugal": "Europe", "norway": "Europe", "denmark": "Europe",
+    "finland": "Europe", "ireland": "Europe", "czech republic": "Europe",
+    "hungary": "Europe", "romania": "Europe", "greece": "Europe",
+    "croatia": "Europe", "slovakia": "Europe", "bulgaria": "Europe",
+    "serbia": "Europe", "ukraine": "Europe", "russia": "Europe",
+    "luxembourg": "Europe", "lithuania": "Europe", "latvia": "Europe",
+    "estonia": "Europe", "slovenia": "Europe", "albania": "Europe",
+    "macedonia": "Europe", "montenegro": "Europe", "kosovo": "Europe",
+    "moldova": "Europe", "belarus": "Europe", "iceland": "Europe",
+    "monaco": "Europe", "malta": "Europe", "cyprus": "Europe",
+    "bosnia and herzegovina": "Europe", "jersey": "Europe", "guernsey": "Europe",
+    "united states of america": "North America", "canada": "North America",
+    "mexico": "North America",
+    "brazil": "Latin America", "argentina": "Latin America",
+    "colombia": "Latin America", "chile": "Latin America",
+    "peru": "Latin America", "venezuela": "Latin America",
+    "cuba": "Latin America", "dominican republic": "Latin America",
+    "ecuador": "Latin America",
+    "china": "Asia", "japan": "Asia", "india": "Asia",
+    "south korea": "Asia", "singapore": "Asia", "taiwan": "Asia",
+    "indonesia": "Asia", "malaysia": "Asia", "thailand": "Asia",
+    "philippines": "Asia", "vietnam": "Asia", "pakistan": "Asia",
+    "bangladesh": "Asia", "hong kong": "Asia", "cambodia": "Asia",
+    "myanmar": "Asia", "sri lanka": "Asia",
+    "israel": "Middle East", "iran": "Middle East",
+    "saudi arabia": "Middle East", "united arab emirates": "Middle East",
+    "turkey": "Middle East", "iraq": "Middle East", "jordan": "Middle East",
+    "lebanon": "Middle East", "egypt": "Middle East", "qatar": "Middle East",
+    "kuwait": "Middle East", "bahrain": "Middle East",
+    "palestine": "Middle East", "syria": "Middle East", "oman": "Middle East",
+    "nigeria": "Africa", "south africa": "Africa", "kenya": "Africa",
+    "ethiopia": "Africa", "ghana": "Africa", "tanzania": "Africa",
+    "morocco": "Africa", "algeria": "Africa", "angola": "Africa",
+    "cameroon": "Africa", "uganda": "Africa", "dr congo": "Africa",
+    "cape verde": "Africa", "ivory coast": "Africa",
+    "australia": "Oceania", "new zealand": "Oceania",
+    "fiji": "Oceania", "cook islands": "Oceania",
+}
+
+REGION_POS = {
+    "North America": {"lon": -100, "lat":  50},
+    "Latin America": {"lon":  -60, "lat": -15},
+    "Europe":        {"lon":   15, "lat":  52},
+    "Africa":        {"lon":   22, "lat":   5},
+    "Middle East":   {"lon":   47, "lat":  27},
+    "Asia":          {"lon":  100, "lat":  38},
+    "Oceania":       {"lon":  145, "lat": -27},
+}
+
+CMAP_BAR  = mcolors.LinearSegmentedColormap.from_list("b", ["#BFDBFE", "#1E3A8A"])
+CMAP_BLUE = mcolors.LinearSegmentedColormap.from_list(
+    "blue_scale", ["#BFD7F0", "#3B82F6", "#1D4ED8", "#1E3A8A", "#0D1B4B"])
+TEXT    = "#1A1D23"
+TDIM    = "#6B7280"
+LIGHT   = "#9CA3AF"
+MAX_PTS = 8000   # bubble size — increase to enlarge all bubbles
+
+
+# ── HELPERS ───────────────────────────────────────────────────────────────────
+def parse_list(val):
+    if pd.isna(val) or str(val).strip() in ("", "nan"):
+        return []
+    try:
+        r = ast.literal_eval(str(val).strip())
+        return [str(v).strip().lower() for v in r] if isinstance(r, list) \
+               else [str(r).strip().lower()]
+    except Exception:
+        return [p.strip().lower()
+                for p in re.sub(r"[\[\]']", "", str(val)).split(",") if p.strip()]
+
+
+def is_ascii(s):
+    try:
+        s.encode("ascii")
+        return True
+    except UnicodeEncodeError:
+        return False
+
+
+# ── LOAD & PREPARE ────────────────────────────────────────────────────────────
+df = pd.read_csv(DATA_PATH, header=None, dtype=str)
+df.columns = COLS[:df.shape[1]]
+df = df[df["duplicate"].str.strip().str.lower() == "false"].copy()
+df = df.drop_duplicates(subset="article_id", keep="first")
+
+total    = len(df)
+date_min = df["source_date"].min()
+date_max = df["source_date"].max()
+df["countries_list"] = df["country"].apply(parse_list)
+
+EXCLUDE  = {"world", "europe", "european union", ""}
+exploded = df.explode("countries_list")
+exploded = exploded[~exploded["countries_list"].isin(EXCLUDE)].copy()
+exploded["region"] = exploded["countries_list"].map(REGION_MAP).fillna("Other")
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# FIG 1 — TOP 10 PUBLISHER COUNTRIES + TOP 10 SOURCES (side by side)
+# ══════════════════════════════════════════════════════════════════════════════
+pub_counts = exploded["countries_list"].value_counts().head(10).reset_index()
+pub_counts.columns = ["country", "articles"]
+pub_counts["country"] = pub_counts["country"].str.title()
+pub_counts["pct"]     = (pub_counts["articles"] / total * 100).round(1)
+pub_counts = pub_counts.sort_values("articles", ascending=True)
+
+src_all   = df.groupby("source_name").agg(articles=("article_id", "count")).reset_index()
+src_ascii = src_all[src_all["source_name"].apply(is_ascii)]
+
+skipped = src_all[~src_all["source_name"].apply(is_ascii)]
+
+src_counts = src_ascii.sort_values("articles", ascending=False).head(10).reset_index(drop=True)
+src_counts["pct"] = (src_counts["articles"] / total * 100).round(1)
+src_counts = src_counts.sort_values("articles", ascending=True)
+
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(22, 8), facecolor="white", dpi=150)
+
+# ── Left: Publisher countries ─────────────────────────────────────────────────
+ax1.set_facecolor("white")
+n    = len(pub_counts)
+xmax = pub_counts["articles"].max()
+
+for i, (_, row) in enumerate(pub_counts.iterrows()):
+    color = "#B45309" if i == n - 1 else CMAP_BAR(row["articles"] / xmax)
+    ax1.barh(i, row["articles"], color=color, height=0.55,
+             edgecolor="white", linewidth=0.4)
+    ax1.text(row["articles"] + xmax * 0.015, i,
+             f"{int(row['articles'])}  ({row['pct']:.1f}%)",
+             va="center", ha="left", fontsize=9.5, color=TEXT,
+             fontweight="bold" if i == n - 1 else "normal")
+
+ax1.set_yticks(range(n))
+ax1.set_yticklabels(pub_counts["country"], fontsize=11, color=TEXT)
+ax1.set_xlim(0, xmax * 1.30)
+ax1.set_xlabel("Number of articles", fontsize=10, color=TDIM, labelpad=8)
+ax1.tick_params(axis="x", labelsize=9, colors=TDIM)
+ax1.tick_params(axis="y", pad=10)
+ax1.xaxis.grid(True, color="#E5E7EB", linewidth=0.6, zorder=0)
+ax1.set_axisbelow(True)
+for sp in ax1.spines.values():
+    sp.set_visible(False)
+ax1.spines["bottom"].set_visible(True)
+ax1.spines["bottom"].set_color("#E5E7EB")
+ax1.set_title("Top 10 Publisher Countries by Article Volume",
+              fontsize=13, fontweight="bold", color=TEXT,
+              loc="left", pad=12)
+
+# ── Right: News sources ───────────────────────────────────────────────────────
+ax2.set_facecolor("white")
+n2    = len(src_counts)
+xmax2 = src_counts["articles"].max()
+
+for i, (_, row) in enumerate(src_counts.iterrows()):
+    color = "#B45309" if i == n2 - 1 else CMAP_BAR(row["articles"] / xmax2)
+    ax2.barh(i, row["articles"], color=color, height=0.55,
+             edgecolor="white", linewidth=0.4)
+    ax2.text(row["articles"] + xmax2 * 0.015, i,
+             f"{int(row['articles'])}  ({row['pct']:.1f}%)",
+             va="center", ha="left", fontsize=9.5, color=TEXT,
+             fontweight="bold" if i == n2 - 1 else "normal")
+
+ax2.set_yticks(range(n2))
+ax2.set_yticklabels(src_counts["source_name"], fontsize=11, color=TEXT)
+ax2.set_xlim(0, xmax2 * 1.30)
+ax2.set_xlabel("Number of articles", fontsize=10, color=TDIM, labelpad=8)
+ax2.tick_params(axis="x", labelsize=9, colors=TDIM)
+ax2.tick_params(axis="y", pad=10)
+ax2.xaxis.grid(True, color="#E5E7EB", linewidth=0.6, zorder=0)
+ax2.set_axisbelow(True)
+for sp in ax2.spines.values():
+    sp.set_visible(False)
+ax2.spines["bottom"].set_visible(True)
+ax2.spines["bottom"].set_color("#E5E7EB")
+ax2.set_title("Top 10 News Sources by Article Count",
+              fontsize=13, fontweight="bold", color=TEXT,
+              loc="left", pad=12)
+
+fig.text(0.02, 0.01,
+         f"Source: newsdata.io  ·  {total:,} articles  ·  "
+         f"{df['source_name'].nunique()} unique sources  ·  "
+         f"{date_min} to {date_max}  ·  Sources with non-Latin scripts excluded",
+         fontsize=8, color=LIGHT, va="bottom")
+
+fig.text(0.27, -0.04,
+         "Figure 1: Top 10 publisher countries by article volume.",
+         fontsize=16, color=TEXT, va="top", ha="center",
+         fontstyle="italic", transform=fig.transFigure)
+
+fig.text(0.73, -0.04,
+         "Figure 2: Top 10 news sources by article count.",
+         fontsize=16, color=TEXT, va="top", ha="center",
+         fontstyle="italic", transform=fig.transFigure)
+
+plt.subplots_adjust(left=0.08, right=0.97, top=0.90, bottom=0.12, wspace=0.35)
+plt.show()
+```
+### Interpretation
+
+**Flat country distribution.** Across 2,261 original articles, the UK leads with only 175 articles (7.7%), just 2.3 points ahead of tenth-place Argentina (5.4%). Five African nations (Angola, Algeria, DR Congo, Cape Verde, Ivory Coast) make up roughly 30% of the top-10, a share likely driven by newsdata.io's indexing of French-language African outlets rather than real editorial output. The modest US/UK shares confirm that geographic spread reflects the API's source portfolio, not real-world news production.
+
+**Extreme source fragmentation.** Menafn, a Middle Eastern press-release aggregator, leads with only 95 articles (4.2%); the top 10 sources together cover just 21.6% of volume. Of 581 unique sources, 84.7% contribute five or fewer articles, and hyper-local outlets sit alongside international broadcasters — a classic long-tail pattern.
+
+**Regional imbalance.** Europe leads with 689 articles (30.5%), followed by Africa (20.5%) and Latin America (15.4%). North America accounts for just 8.8% — strikingly small given the size of the US news market. A large "Other" bucket (32.1%) contains unmapped countries such as Libya, Azerbaijan, and Tunisia. Coverage nominally spans 185 countries but is systematically skewed by source availability rather than actual journalism output.
+
+## RQ2 — Story Spread and Duplication
+
+```{python}
+#| label: plot-dup
+#| fig-width: 12
+#| fig-height: 5
+# Built-in
+import ast
+import re
+import warnings
+from pathlib import Path
+
+# Data handling
+import numpy as np
+import pandas as pd
+
+# Visualisation
+import matplotlib.colors as mcolors
+import matplotlib.pyplot as plt
+
+warnings.filterwarnings("ignore")
+
+
+# ── PATHS ─────────────────────────────────────────────────────────────────────
+DATA_PATH = Path("../data/processed/merged data.csv")
+
+
+# ── CONSTANTS ─────────────────────────────────────────────────────────────────
+COLS = [
+    "article_id", "link", "title", "description", "keywords", "creator",
+    "language", "country", "category", "datatype", "pubDate", "pubDateTZ",
+    "fetched_at", "image_url", "video_url", "source_id", "source_name",
+    "source_priority", "source_url", "source_icon", "duplicate", "source_date",
+]
+
+TEXT     = "#1A1D23"
+TDIM     = "#6B7280"
+LIGHT    = "#9CA3AF"
+COL_ORIG = "#3B82F6"   # blue  → original articles
+COL_DUP  = "#B45309"   # orange → duplicate articles (matches RQ1)
+
+
+# ── HELPERS ───────────────────────────────────────────────────────────────────
+def parse_list(val):
+    if pd.isna(val) or str(val).strip() in ("", "nan"):
+        return []
+    try:
+        r = ast.literal_eval(str(val).strip())
+        return [str(v).strip().lower() for v in r] if isinstance(r, list) \
+               else [str(r).strip().lower()]
+    except Exception:
+        return [p.strip().lower()
+                for p in re.sub(r"[\[\]']", "", str(val)).split(",") if p.strip()]
+
+
+def is_ascii(s):
+    try:
+        s.encode("ascii")
+        return True
+    except UnicodeEncodeError:
+        return False
+
+
+# ── SHARED DIVERGING BAR HELPER ───────────────────────────────────────────────
+def draw_diverging(ax, labels, orig_rates, dup_rates):
+    """Draw a diverging bar chart on ax.
+    orig_rates go left (negative), dup_rates go right (positive).
+    % labels sit just outside each bar end.
+    """
+    n = len(labels)
+    for i, (orig_pct, dup_pct) in enumerate(zip(orig_rates, dup_rates)):
+        ax.barh(i, -orig_pct, color=COL_ORIG, height=0.60,
+                edgecolor="white", linewidth=0.4)
+        ax.barh(i,  dup_pct,  color=COL_DUP,  height=0.60,
+                edgecolor="white", linewidth=0.4)
+        # Labels outside bars
+        ax.text(-orig_pct - 1.5, i, f"{orig_pct:.0f}%",
+                va="center", ha="right", fontsize=10,
+                color=COL_ORIG, fontweight="bold")
+        ax.text(dup_pct + 1.5, i, f"{dup_pct:.0f}%",
+                va="center", ha="left", fontsize=10,
+                color=COL_DUP, fontweight="bold")
+
+    ax.set_yticks(range(n))
+    ax.set_yticklabels(labels, fontsize=12, color=TEXT)
+    ax.axvline(0, color="#CBD5E1", linewidth=1.2)
+    ax.set_xlim(-115, 115)
+    ax.tick_params(axis="x", labelsize=10, colors=TDIM)
+    ax.tick_params(axis="y", pad=8)
+    ax.set_xticks([-100, -75, -50, -25, 0, 25, 50, 75, 100])
+    ax.set_xticklabels(["100%","75%","50%","25%","0","25%","50%","75%","100%"])
+    ax.xaxis.grid(True, color="#E5E7EB", linewidth=0.6, zorder=0)
+    ax.set_axisbelow(True)
+    for sp in ax.spines.values():
+        sp.set_visible(False)
+    # Column headers above each half
+    ax.text(0.25, 1.01, "Original",
+            transform=ax.transAxes,
+            ha="center", va="bottom", fontsize=13,
+            color=COL_ORIG, fontweight="bold")
+    ax.text(0.75, 1.01, "Duplicate",
+            transform=ax.transAxes,
+            ha="center", va="bottom", fontsize=13,
+            color=COL_DUP, fontweight="bold")
+
+
+# ── LOAD & PREPARE ────────────────────────────────────────────────────────────
+df = pd.read_csv(DATA_PATH, header=None, dtype=str)
+df.columns = COLS[:df.shape[1]]
+df = df.drop_duplicates(subset="article_id", keep="first")
+
+df["category_list"] = df["category"].apply(parse_list)
+df["category_list"] = df["category_list"].apply(lambda x: [c for c in x if c != "top"])
+df["is_dup"] = df["duplicate"].str.strip().str.lower() == "true"
+
+total    = len(df)
+n_dup    = int(df["is_dup"].sum())
+date_min = df["source_date"].min()
+date_max = df["source_date"].max()
+
+df_cat = df.explode("category_list")
+df_cat = df_cat[df_cat["category_list"].notna() & (df_cat["category_list"] != "")].copy()
+
+cat_stats = (df_cat.groupby("category_list")
+             .agg(total=("article_id", "count"), dups=("is_dup", "sum"))
+             .reset_index())
+cat_stats["dup_rate"]  = (cat_stats["dups"] / cat_stats["total"] * 100).round(1)
+cat_stats["orig_rate"] = 100 - cat_stats["dup_rate"]
+cat_stats = (cat_stats[cat_stats["total"] >= 10]
+             .sort_values("dup_rate", ascending=True)
+             .reset_index(drop=True))
+cat_stats["category_list"] = cat_stats["category_list"].str.title()
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# FIG 4 & FIG 5 — SIDE BY SIDE, EACH WITH OWN CAPTION
+# ══════════════════════════════════════════════════════════════════════════════
+src_all = (df.groupby("source_name")
+           .agg(total=("article_id", "count"), dups=("is_dup", "sum"))
+           .reset_index())
+src_all["dup_rate"]  = (src_all["dups"] / src_all["total"] * 100).round(1)
+src_all["orig_rate"] = 100 - src_all["dup_rate"]
+
+src_top = (src_all[src_all["source_name"].apply(is_ascii) & (src_all["total"] >= 5)]
+           .sort_values("dups", ascending=False)
+           .head(10)
+           .sort_values("dup_rate", ascending=True)
+           .reset_index(drop=True))
+
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(24, 9), facecolor="white", dpi=150)
+
+# ── Left: By topic category ──────────────────────────────────────────────────
+ax1.set_facecolor("white")
+draw_diverging(ax1,
+               labels=cat_stats["category_list"].tolist(),
+               orig_rates=cat_stats["orig_rate"].tolist(),
+               dup_rates=cat_stats["dup_rate"].tolist())
+ax1.set_title("Original vs Duplicate Share by Topic Category",
+              fontsize=14, fontweight="bold", color=TEXT,
+              loc="left", pad=36)
+
+# ── Right: By source ─────────────────────────────────────────────────────────
+ax2.set_facecolor("white")
+draw_diverging(ax2,
+               labels=src_top["source_name"].tolist(),
+               orig_rates=src_top["orig_rate"].tolist(),
+               dup_rates=src_top["dup_rate"].tolist())
+ax2.set_title("Original vs Duplicate Share by Source",
+              fontsize=14, fontweight="bold", color=TEXT,
+              loc="left", pad=36)
+
+fig.text(0.02, 0.01,
+         f"Source: newsdata.io  ·  {total:,} articles incl. duplicates  ·  "
+         f"{date_min} to {date_max}  ·  Top 10 sources by duplicate count  ·  "
+         f"Sources with non-Latin scripts excluded",
+         fontsize=9, color=LIGHT, va="bottom")
+
+# Individual captions under each subplot
+fig.text(0.27, -0.02,
+         "Figure 4: Original vs duplicate share by topic category.\n"
+         "Diverging bars split each category into original (left) and duplicate (right) percentages.",
+         fontsize=16, color=TEXT, va="top", ha="center",
+         fontstyle="italic", transform=fig.transFigure)
+
+fig.text(0.73, -0.02,
+         "Figure 5: Original vs duplicate share by source.\n"
+         "Same diverging layout as Figure 4, showing the top 10 sources by duplicate count.",
+         fontsize=16, color=TEXT, va="top", ha="center",
+         fontstyle="italic", transform=fig.transFigure)
+
+plt.subplots_adjust(left=0.06, right=0.97, top=0.88, bottom=0.08, wspace=0.35)
+plt.show()
+```
+### Interpretation
+
+Across 2,729 articles (17.1% duplicates), duplication rates are highest in **business (29.9%)**, **politics (27.8%)** and **crime (27.1%)**, and lowest in **education (6.2%)** and **lifestyle (8.3%)**. Hard-news categories are often wire-service material that is rapidly republished, which inflates their short-term volume; lifestyle is typically locally produced and less tied to breaking cycles.
+
+The source view confirms that a few syndication hubs drive the pattern: **Menafn alone accounts for 29% of all duplicates** (137 of 232 articles, 59% duplicate rate), concentrated in business. Reuters (45.5%) and CNN (33.3%) show the expected wire-service signature, while niche outlets like L'Esportiu de Catalunya (91.7%) and IGN Africa (83.3%) inflate specific verticals. Volume spikes in hard-news categories may therefore partly reflect syndication mechanics rather than editorial attention — filtering duplicates is essential before drawing conclusions about topic trends.
+
+## RQ3 — Cross-Language Coverage
+
+<br>
+
+```{python}
+#| label: plot-heatmap
+#| fig-width: 11
+#| fig-height: 7
 
 import pandas as pd
 import ast
@@ -144,17 +577,15 @@ pivot = pivot[ALL_CATS]
 
 pivot_pct = pivot.div(pivot.sum(axis=1), axis=0) * 100
 
-# ── 3b. Cluster languages by coverage pattern ─────────────────────────────────
-if len(pivot_pct) > 2:
-    row_linkage = linkage(pdist(pivot_pct.values, metric="euclidean"), method="average")
-    row_order = leaves_list(row_linkage)
-    pivot_pct = pivot_pct.iloc[row_order]
+# Sort languages by total article count (descending)
+lang_order = lang_counts[lang_counts >= 5].index.tolist()
+pivot_pct = pivot_pct.reindex([l for l in lang_order if l in pivot_pct.index])
 
 # ── 4. Figure layout ──────────────────────────────────────────────────────────
 N_LANGS = len(pivot_pct)
 N_CATS = len(ALL_CATS)
 
-fig, ax = plt.subplots(figsize=(16, 10))
+fig, ax = plt.subplots(figsize=(18, 12))
 fig.patch.set_facecolor("white")
 ax.set_facecolor("white")
 
@@ -179,6 +610,7 @@ for r in range(N_LANGS):
             fontweight = "normal"
         else:
             txt = f"{val:.0f}%"
+            # High contrast: white on dark cells, dark navy on light cells
             if val > 35:
                 color = "#ffffff"
             else:
@@ -248,11 +680,6 @@ fig.text(
     color="#1a1a1a", fontsize=18, fontweight="bold", va="top"
 )
 fig.text(
-    0.06, 0.91,
-    "Each cell shows what percentage of a language's articles fall into a given category  ·  Languages clustered by coverage similarity",
-    color="#666666", fontsize=8.5, va="top"
-)
-fig.text(
     0.06, 0.03,
     f"Source: newsdata.io  ·  {df.shape[0]} articles  ·  {len(valid_langs)} languages  ·  Languages with < 5 articles excluded",
     color="#aaaaaa", fontsize=7.5, va="bottom"
@@ -260,43 +687,44 @@ fig.text(
 
 plt.subplots_adjust(left=0.11, right=0.91, top=0.85, bottom=0.06)
 
-# ── 11. Save figure ───────────────────────────────────────────────────────────
-output_path = os.path.join(BASE_DIR, "plots", "language_category_heatmap.png")
-os.makedirs(os.path.dirname(output_path), exist_ok=True)
-fig.savefig(output_path, dpi=200, bbox_inches="tight", facecolor="white")
+fig.text(0.50, -0.02,
+         "Figure 6: Cross-language coverage. Each cell shows the percentage of a language's articles\n"
+         "in a given category. Languages are ordered by total article count.",
+         fontsize=16, color="#1A1D23", va="top", ha="center",
+         fontstyle="italic", transform=fig.transFigure)
+
+plt.show()
 ```
 
 ### Interpretation
 
-@fig-heatmap reveals several patterns in how topic coverage varies across languages, though some of these patterns likely reflect characteristics of the data source rather than genuine differences in journalism.
+Figure 6 shows several patterns, though some likely reflect the data source rather than real differences in journalism.
 
-**English shows a distinctive coverage profile.** English is the only language in the dataset with a relatively balanced distribution across categories, with business (33%), politics (25%), sports (14%), and technology (12%) all well represented. This is also the largest sample in the dataset (n = 1,398), which suggests the pattern is reliable rather than an artifact of sample size. The hierarchical clustering places English on its own branch, separate from all other languages, which is consistent with this observation.
+**English is the odd one out.** English (n = 1,398, the largest sample) is the only language with a balanced spread across business (33%), politics (25%), sports (14%), and technology (12%) — suggesting the pattern is real, not a small-sample artifact.
 
-**Most other languages are dominated by the lifestyle category.** Looking at the Lifestyle column, the majority of languages have lifestyle as their top category, often at 60% or higher. Persian (100%), Italian (96%), and Swahili (94%) are the most extreme cases. This pattern is unlikely to reflect real editorial priorities across dozens of languages, and more likely indicates either a bias in how newsdata.io sources non-English content or a default tagging behavior for uncategorized articles. This limitation should be taken into account when interpreting the rest of the results.
+**Most other languages are dominated by lifestyle**, often at 60% or more. Persian (100%), Italian (96%), and Swahili (94%) are the most extreme. This is unlikely to reflect genuine editorial priorities across dozens of languages and more plausibly indicates a sourcing or default-tagging bias in newsdata.io's non-English feeds. Within the lifestyle-heavy group, secondary categories still vary meaningfully: Arabic, Greek, Dutch, Spanish and Russian show a clear sports component (10–35%), while Khmer, Chinese and French show elevated world-news shares. Japanese, Catalan, and Hausa break the pattern entirely with sports/entertainment dominance, but their samples are tiny (n = 13, 21, 17) and should be read with caution.
 
-**The clustering identifies meaningful sub-groups within the lifestyle-dominant languages.** Despite the overall lifestyle skew, the algorithm successfully groups languages with similar secondary patterns:
+### Limitations and Conclusion
 
--   A **lifestyle-and-sports group** (Arabic, Greek, Bulgarian, Dutch, Korean, Spanish, Croatian, Russian) where sports is a consistent secondary category between 10% and 35%.
--   A **near-pure lifestyle group** (Persian, Italian, Swahili) where lifestyle accounts for nearly all articles.
--   A **lifestyle-and-world-news group** (Khmer, Chinese, Bosnian, French) where world news appears as a notable secondary category, with Khmer showing the highest share at 32%.
+Several languages have fewer than 30 articles, making their percentages unstable — Persian has only 5, so one article moves its distribution by 20 points. 
+A robust analysis would require at least 20–30 articles per language. The main takeaway is less about real cross-language differences and more about the dataset itself: English coverage is categorically distinct, and lifestyle is heavily over-represented in non-English content in ways that likely reflect sourcing bias. 
+Future work should diagnose and correct these sourcing effects before drawing substantive cross-language conclusions.\
 
-**A few languages break the lifestyle pattern entirely.** Japanese, Catalan, and Hausa appear at the bottom of the chart with sports and entertainment as their dominant categories. However, all three have small sample sizes (n = 13, 21, and 17 respectively), so these percentages are sensitive to individual articles and should be interpreted with caution.
+{{< pagebreak >}}
 
-### Limitations
+# Future Work
 
-Several languages in the dataset have fewer than 30 articles, which makes their percentages unreliable. Persian in particular has only 5 articles, meaning a single article represents 20% of its distribution. A more robust analysis would raise the minimum article threshold to at least 20 or 30 articles per language. Additionally, the dominance of the lifestyle category across most non-English languages suggests a data collection bias that would need to be investigated before drawing substantive conclusions about cross-language differences in news coverage.
+Four directions would meaningfully extend N.A.P. beyond its current descriptive scope:
 
-### Conclusion
+- **Longitudinal ingestion.** Running the pipeline on a schedule for several weeks would unlock the original RQ2 on temporal dynamics and enable analysis of topic lifecycles, weekday effects, and event-driven volume spikes. This requires no architectural change — only scheduled execution and partitioned storage.
+- **Bias diagnosis via a second source.** The lifestyle over-representation in non-English feeds is almost certainly a newsdata.io sourcing artifact. Triangulating with GDELT or Event Registry, and replacing API-provided categories with a self-trained classifier on titles and descriptions, would give consistent cross-language labels and make RQ3 defensible.
+- **An NLP layer for framing analysis.** The project's motivation centers on tone and bias, which metadata alone cannot capture. Adding sentiment and stance detection, named-entity extraction, and embedding-based story clustering would let us measure how the *same event* is framed differently across regions — moving N.A.P. from descriptive to analytical.
+- **Event-level aggregation.** Given that 84.7% of sources contribute five or fewer articles and a single aggregator drives 29% of duplicates, analysis should shift from articles to clustered story events, making cross-source comparisons fair and fixing the volume-inflation problem identified in RQ2.
 
-The main finding from this visualization is less about differences between languages and more about the structure of the dataset itself: English coverage is categorically different from all other languages, and the lifestyle category is heavily over-represented in non-English content in ways that likely reflect the data source rather than real journalistic patterns. Future work should focus on understanding and correcting for these sourcing effects before attempting to characterize genuine cross-language differences.
-
-
-
+A natural priority order is: stabilize scheduled ingestion, add a second data source, then layer NLP on top. The first two steps are inexpensive and unblock the rest.
 
 # Use of GenAI
 
-We utilized AI such as ChatGPT and Gemini as a collaborative tool to streamline coding and documentation workflows. 
-To maintain quality, all suggestions were manually tested and adapted to fit our dataset. 
-The AI functioned as a supportive resource for problem-solving, though all strategic decisions and data validations remained the sole responsibility of the project team.
+We used AI tools such as ChatGPT and Gemini to streamline coding and documentation. All suggestions were manually tested and adapted to our dataset; strategic decisions and data validation remained the sole responsibility of the project team.
 
 

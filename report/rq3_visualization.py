@@ -4,11 +4,17 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 from matplotlib.colors import LinearSegmentedColormap
+from scipy.cluster.hierarchy import linkage, leaves_list
+from scipy.spatial.distance import pdist
 
 
 # ── 1. Load & parse ──────────────────────────────────────────────────────────
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-df = pd.read_csv(os.path.join(BASE_DIR, "data", "processed", "merged data.csv"))
+try:
+    BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+except NameError:
+    BASE_DIR = os.path.dirname(os.getcwd())  # goes up from report/ to nap/
+
+df = pd.read_csv(os.path.join(BASE_DIR, "data", "processed", "processed_merged.csv"))
 
 df["category_list"] = df["category"].apply(
     lambda x: ast.literal_eval(x) if pd.notna(x) else []
@@ -48,7 +54,7 @@ pivot_pct = pivot_pct.reindex([l for l in lang_order if l in pivot_pct.index])
 N_LANGS = len(pivot_pct)
 N_CATS = len(ALL_CATS)
 
-fig, ax = plt.subplots(figsize=(16, 10))
+fig, ax = plt.subplots(figsize=(18, 12))
 fig.patch.set_facecolor("white")
 ax.set_facecolor("white")
 
@@ -143,11 +149,6 @@ fig.text(
     color="#1a1a1a", fontsize=18, fontweight="bold", va="top"
 )
 fig.text(
-    0.06, 0.91,
-    "Each cell shows what percentage of a language's articles fall into a given category  ·  Sorted by total article count",
-    color="#666666", fontsize=8.5, va="top"
-)
-fig.text(
     0.06, 0.03,
     f"Source: newsdata.io  ·  {df.shape[0]} articles  ·  {len(valid_langs)} languages  ·  Languages with < 5 articles excluded",
     color="#aaaaaa", fontsize=7.5, va="bottom"
@@ -155,10 +156,10 @@ fig.text(
 
 plt.subplots_adjust(left=0.11, right=0.91, top=0.85, bottom=0.06)
 
-# ── 11. Save & show ───────────────────────────────────────────────────────────
-output_path = os.path.join(BASE_DIR, "plots", "language_category_heatmap.png")
-os.makedirs(os.path.dirname(output_path), exist_ok=True)
-fig.savefig(output_path, dpi=200, bbox_inches="tight", facecolor="white")
-print(f"Saved to {output_path}")
+fig.text(0.50, -0.02,
+         "Figure 6: Cross-language coverage. Each cell shows the percentage of a language's articles\n"
+         "in a given category. Languages are ordered by total article count.",
+         fontsize=16, color="#1A1D23", va="top", ha="center",
+         fontstyle="italic", transform=fig.transFigure)
 
 plt.show()
