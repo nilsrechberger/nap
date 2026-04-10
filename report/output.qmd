@@ -725,6 +725,6 @@ A natural priority order is: stabilize scheduled ingestion, add a second data so
 
 # Use of GenAI
 
-We used AI tools such as ChatGPT and Gemini to streamline coding and documentation. All suggestions were manually tested and adapted to our dataset; strategic decisions and data validation remained the sole responsibility of the project team.
+We used AI tools such as Claude and Gemini to streamline coding and documentation. All suggestions were manually tested and adapted to our dataset; strategic decisions and data validation remained the sole responsibility of the project team.
 
 
